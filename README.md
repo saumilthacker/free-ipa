@@ -1,2 +1,2 @@
-# test
-this is test repo
+# free ipa
+this is free ipa file
