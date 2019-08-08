@@ -1,0 +1,38 @@
+---
+- hosts: all
+  vars_prompt:
+
+    - name: prompt
+      prompt: "enter your DNS"
+      register: prompt
+      private: no
+  tasks:
+   - shell: grep  "location" /usr/share/moogsoft/etc/cots/nginx/test.txt |  awk '{print $2}'|tr  --delete /
+     register: shell_result
+
+   - debug:
+       var: shell_result
+   - lineinfile:
+        dest: /usr/share/moogsoft/etc/cots/nginx/test.txt
+        insertafter: "location /{{item}} {"
+        line: "mirror /mirror-{{ item }} ; mirror_request_body on; "
+     with_items: "{{shell_result.stdout.split('\n')}}"
+   - shell: grep "proxy_pass" /usr/share/moogsoft/etc/cots/nginx/test.txt | awk '{print $2}' | tr --delete 'http://localhost:'
+     register : result
+
+   - debug:
+      var: result
+
+   - name: item.0 returns from the 'a' list, item.1 returns from the '1' list
+     debug:
+      msg: "{{ item.0 }} and {{ item.1 }} and {{ prompt }}"
+     with_together:
+      - shell_result
+      - result
+   - lineinfile:
+        dest: /usr/share/moogsoft/etc/cots/nginx/test.txt
+        line: "location /{{ item.0 }} { proxy_pass http://{{ prompt }}:{{ item.1 }} }"
+     with_together:
+        - "{{shell_result.stdout.split('\n')}}"
+        - "{{result.stdout.split('\n')}}"
+
