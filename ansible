@@ -7,7 +7,7 @@
       register: prompt
       private: no
   tasks:
-   - shell: grep  "location" /usr/share/moogsoft/etc/cots/nginx/test.txt |  awk '{print $2}'|tr  --delete /
+   - shell: grep  "location" /usr/share/moogsoft/etc/cots/nginx/test.txt | grep -v "^\s*[#;]" |grep -v "location \/mirror.*" |  awk '{print $2}'|tr  --delete /
      register: shell_result
 
    - debug:
@@ -17,7 +17,7 @@
         insertafter: "location /{{item}} {"
         line: "mirror /mirror-{{ item }} ; mirror_request_body on; "
      with_items: "{{shell_result.stdout.split('\n')}}"
-   - shell: grep "proxy_pass" /usr/share/moogsoft/etc/cots/nginx/test.txt | awk '{print $2}' | tr --delete 'http://localhost:'
+   - shell:  grep  "proxy_pass" /usr/share/moogsoft/etc/cots/nginx/test.txt | grep -v "^\s*[#;]" |grep -v "location \/mirror.*" |  awk '{print $2}'|tr  --delete / | grep -o '[[:digit:]]*'
      register : result
 
    - debug:
@@ -31,8 +31,7 @@
       - result
    - lineinfile:
         dest: /usr/share/moogsoft/etc/cots/nginx/test.txt
-        line: "location /{{ item.0 }} { proxy_pass http://{{ prompt }}:{{ item.1 }} }"
+        line: "location /mirror-{{ item.0 }} { proxy_pass http://{{ prompt }}:{{ item.1 }}; }"
      with_together:
         - "{{shell_result.stdout.split('\n')}}"
         - "{{result.stdout.split('\n')}}"
-
